@@ -3,85 +3,86 @@ from google import genai
 from google.genai import types
 
 # ---------------------------------------------------------
-# Page Configuration & Styling
+# Page Configuration
 # ---------------------------------------------------------
 st.set_page_config(
-    page_title="Talk with Teddy Roosevelt",
+    page_title="Theodore Roosevelt AI",
     page_icon="🤠",
     layout="centered"
 )
 
-st.title("🤠 Ask President Theodore Roosevelt")
-st.caption("A historical dialogue for 10th-grade American History students.")
+st.title("🤠 President Theodore Roosevelt")
+st.caption("Historical dialogue for 10th-grade US History students.")
 
 # ---------------------------------------------------------
-# API Key Verification
+# API Key Verification & Model Configuration
 # ---------------------------------------------------------
 if "GEMINI_API_KEY" not in st.secrets:
     st.error("Missing Gemini API Key! Please set `GEMINI_API_KEY` in Streamlit secrets.")
     st.stop()
 
-# Initialize Google GenAI client
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# Model identifier (set to Gemini Flash / Flash-Lite)
+# Directly set to Gemini 3.5 Flash-Lite (with secrets fallback)
 MODEL_ID = st.secrets.get("GEMINI_MODEL_ID", "gemini-3.5-flash-lite")
 
 # ---------------------------------------------------------
-# System Prompt
+# System Prompt: Fact-Dense + 10th-Grade Style
 # ---------------------------------------------------------
 SYSTEM_INSTRUCTION = """
-You are President Theodore "Teddy" Roosevelt (26th President of the United States).
-You are conversing with 10th-grade high school students in the United States.
+You are President Theodore Roosevelt (26th President of the United States).
+You are answering questions from American 10th-grade high school history students.
 
-Tone and Language Guidelines:
-- Speak in Roosevelt's characteristic energetic, firm, and spirited manner ("Bully!", "strenuous life", "speak softly and carry a big stick").
-- Keep vocabulary and syntax strictly accessible to a 10th-grade reading level. Avoid archaic expressions that obscure your core meaning.
-- Be encouraging, civic-minded, and passionate about public service, nature, and justice.
+Persona & Tone:
+- Speak in Roosevelt's authentic, vigorous, and resolute voice ("Bully!", "strenuous life").
+- Calibrate your vocabulary and sentence structure strictly to a US 10th-grade reading level. Be punchy, clear, and spirited—never vague.
 
-Grounding and Evidence:
-- Base your statements strictly on authentic primary and secondary sources:
-  * Theodore Roosevelt Papers & Moving Image Collection (Library of Congress)
-  * Theodore Roosevelt Center at Dickinson State University
-  * Harvard University Library (Theodore Roosevelt Collection)
-  * Theodore Roosevelt Association Collection at LIU Post
-  * The American Presidency Project (Executive Orders, State of the Union addresses)
-  * Sagamore Hill National Historic Site (National Park Service)
-  * Theodore Roosevelt Presidential Library Foundation
-  * Chronicling America (Library of Congress & NEH historic newspapers)
-  * Project Gutenberg & PBS American Experience
-  * Key legislation (e.g., Antiquities Act, Hepburn Act, Pure Food and Drug Act), court cases (e.g., Northern Securities Co. v. United States), and congressional documents.
+FACTUAL DENSITY MANDATE (CRITICAL):
+Do NOT speak in generic motivational platitudes. You MUST incorporate at least TWO concrete historical facts in every answer, such as:
+- Exact calendar years or dates (e.g., 1902 Coal Strike, 1906 Antiquities Act).
+- Names of real people (e.g., Gifford Pinchot, J.P. Morgan, John Muir, Booker T. Washington).
+- Specific legislation, court cases, executive actions, or places (e.g., Elkins Act, Northern Securities Co. v. United States, Pelican Island, Sagamore Hill).
 
-Strict Response Rules:
-1. WORD COUNT: Your spoken answer must be between 15 words and 120 words maximum.
-2. CITATION REQUIREMENT: At the very end of your response, on a new line, include a citation labeled:
-   "Source: [Name of document, letter, or speech], [Year] — [Archival repository]".
-   The citation line does not count toward the 120-word limit.
+Archival Grounding:
+Base your knowledge strictly on:
+- Library of Congress (TR Papers & Moving Image Collection, Chronicling America)
+- Theodore Roosevelt Center at Dickinson State University
+- Harvard University Library (TR Collection)
+- Theodore Roosevelt Association Collection at LIU Post
+- The American Presidency Project (Speeches, Executive Orders)
+- Sagamore Hill National Historic Site (NPS)
+- Project Gutenberg & PBS American Experience
+
+Strict Rules:
+1. LENGTH: Your spoken answer must be between 15 and 120 words.
+2. CITATION: At the very end, add a new line with your source:
+   "Source: [Speech/Letter/Act/Court Case], [Year] — [Digital Archive Name]"
+   (The citation line does not count toward the 120-word limit).
 """
 
 # ---------------------------------------------------------
-# Chat History Management (Sliding Window: Last 6 Questions)
+# Session State: Memory of Previous 6 Questions
 # ---------------------------------------------------------
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Display conversation history
+# Display conversation
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 # User Input
-if user_input := st.chat_input("Ask Colonel Roosevelt about conservation, trust-busting, or foreign policy..."):
-    # Append user question
+if user_input := st.chat_input("Ask about trust-busting, conservation, the Panama Canal, or foreign policy..."):
+    # Add new user message
     st.session_state.chat_history.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # Maintain sliding window: retain only the last 6 questions (max 12 messages)
+    # Memory Window: Keep only the last 6 exchanges (up to 12 total messages)
     if len(st.session_state.chat_history) > 12:
         st.session_state.chat_history = st.session_state.chat_history[-12:]
 
-    # Format history for Gemini API
+    # Prepare formatted payload for Gemini API
     formatted_contents = [
         types.Content(
             role="user" if msg["role"] == "user" else "model",
@@ -92,20 +93,18 @@ if user_input := st.chat_input("Ask Colonel Roosevelt about conservation, trust-
 
     # Generate response
     with st.chat_message("assistant"):
-        with st.spinner("Roosevelt is consulting his field notes..."):
+        with st.spinner("Colonel Roosevelt is reviewing his dispatches..."):
             try:
                 response = client.models.generate_content(
                     model=MODEL_ID,
                     contents=formatted_contents,
                     config=types.GenerateContentConfig(
                         system_instruction=SYSTEM_INSTRUCTION,
-                        temperature=0.3,  # Strict factual grounding
+                        temperature=0.3,  # Low temperature for strict factual accuracy
                     )
                 )
                 assistant_text = response.text
                 st.markdown(assistant_text)
-                
-                # Append assistant response to history
                 st.session_state.chat_history.append({"role": "assistant", "content": assistant_text})
 
             except Exception as e:
