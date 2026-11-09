@@ -25,7 +25,7 @@ if "GEMINI_API_KEY" not in st.secrets:
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # Model identifier (set to Gemini Flash / Flash-Lite)
-MODEL_ID = st.secrets.get("GEMINI_MODEL_ID", "gemini-2.5-flash")
+MODEL_ID = st.secrets.get("GEMINI_MODEL_ID", "gemini-3.5-flash-lite")
 
 # ---------------------------------------------------------
 # System Prompt
